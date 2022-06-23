@@ -12,4 +12,4 @@ RUN npx prisma generate --schema ./prisma/schema.prisma
 
 EXPOSE 80
 
-CMD npm run start:sync
+CMD npm run start:cron

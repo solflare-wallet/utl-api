@@ -1,35 +1,41 @@
 import { PrismaPromise } from '@prisma/client'
-import dotenv from 'dotenv'
-import _ from 'lodash'
+import axios from 'axios'
+import { CronJob } from 'cron'
 
-import tokenListJson from '../solana-tokenlist.json'
+import Prisma from '../prisma'
+import LoggerUtil from '../utils/logger.util'
 
-import Prisma from './prisma'
+interface Token {
+    address: string
+    name: string
+    symbol: string
+    logoURI: string | null
+    chainId: number
+    decimals: number
+    holders: number | null
+    verified: boolean
+    tags: string[]
+}
 
-// import axios from 'axios'
+async function handle() {
+    LoggerUtil.info(`${name} | Start ${Date.now()}`)
 
-dotenv.config()
+    const cdnUrl = process.env.CDN_URL
+    if (!cdnUrl) {
+        LoggerUtil.info(`${name} | No CDN URL provided`)
+        throw new Error('No CDN URL provided')
+    }
 
-Prisma.$connect()
-    .then(async () => {
-        console.log(`Connected to db`)
-        syncTokenList().then(() => {
-            console.log('Token list synced')
-        })
-    })
-    .catch((error: any) => {
-        console.log('There was an error connecting to db')
-        console.log(error)
-    })
+    const response = await axios.get<{
+        tokens: Token[]
+    }>(cdnUrl)
 
-async function syncTokenList() {
-    // const response = tokenListJson
-
-    const newTokens = tokenListJson.tokens
+    const newTokens = response.data.tokens
     const currentTokens = await Prisma.token.findMany()
 
-    console.log('newTokens', newTokens.length)
-    console.log('currentTokens', currentTokens.length)
+    LoggerUtil.info(
+        `${name} | New count: ${newTokens.length} | Current count: ${currentTokens.length}`
+    )
 
     const newMints = newTokens.map((token) => token.address)
     const currentMints = currentTokens.map((token) => token.address)
@@ -79,6 +85,13 @@ async function syncTokenList() {
     for (const token of updateTokens) {
         const newToken = newTokens.find((t) => t.address === token.address)
 
+        if (!newToken) {
+            LoggerUtil.info(
+                `${name} | Couldnt find new token from current: ${token.address}`
+            )
+            continue
+        }
+
         transactions.push(
             Prisma.tag.deleteMany({
                 where: {
@@ -113,7 +126,21 @@ async function syncTokenList() {
 
     await Prisma.$transaction(transactions)
 
-    console.log('deleteMints', deleteMints.length)
-    console.log('updateTokens', updateTokens.length)
-    console.log('insertTokens', insertTokens.length)
+    LoggerUtil.info(
+        `${name} | Deleted: ${deleteMints.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
+    )
 }
+
+/* istanbul ignore next */
+export const cronJob = () =>
+    new CronJob(
+        '0 */5 * * * *',
+        async () => {
+            await handle() // 30 days
+        },
+        null,
+        true,
+        'UTC'
+    )
+
+export const name = 'utl-api-cron-sync'

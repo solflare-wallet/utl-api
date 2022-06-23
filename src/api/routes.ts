@@ -1,9 +1,10 @@
 import { Express, NextFunction, Request, Response } from 'express'
 
-import * as AccountController from '../controllers/account.controller'
 import { HttpNotFound } from '../utils/errors.util'
 
-const index = (app: Express) => {
+import * as Controller from './controller'
+
+const routes = (app: Express) => {
     app.use((req: Request, res: Response, next: NextFunction) => {
         res.setHeader('Access-Control-Allow-Origin', '*')
         res.setHeader(
@@ -19,13 +20,13 @@ const index = (app: Express) => {
         next()
     })
 
-    app.get('/v1/list', AccountController.fetchAll)
-    app.get('/v1/search', AccountController.searchByContent)
-    app.post('/v1/mints', AccountController.fetchByMint)
+    app.get('/v1/list', Controller.fetchAll)
+    app.get('/v1/search', Controller.searchByContent)
+    app.post('/v1/mints', Controller.fetchByMint)
 
     app.use(function (req: Request, res: Response, next: NextFunction) {
         return next(new HttpNotFound())
     })
 }
 
-export default index
+export default routes

@@ -1,15 +1,17 @@
 import dotenv from 'dotenv'
+
+import * as SyncJob from './jobs/sync.job'
+import Prisma from './prisma'
+import * as OsReportUtil from './utils/osReport.util'
+
 dotenv.config()
 
-import ApiSetup from './api/setup'
-import Prisma from './prisma'
+setInterval(OsReportUtil.task('utl-api-cron'), OsReportUtil.interval)
 
 Prisma.$connect()
     .then(async () => {
         console.log(`Connected to db`)
-        ApiSetup.listen(process.env.PORT, () => {
-            console.log(`Express running on port ${process.env.PORT}`)
-        })
+        SyncJob.cronJob().start()
     })
     .catch((error: any) => {
         console.log('There was an error connecting to db')
