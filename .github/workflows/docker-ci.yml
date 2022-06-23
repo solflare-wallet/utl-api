@@ -46,7 +46,7 @@ jobs:
            tags: latest, ${{ github.event.inputs.version }}
 
 
- docker-push-cron:
+  docker-push-cron:
    #    needs: test
    runs-on: ubuntu-latest
    permissions:
