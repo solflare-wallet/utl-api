@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'
+dotenv.config()
 
 import * as SyncJob from './jobs/sync.job'
 import Prisma from './prisma'
