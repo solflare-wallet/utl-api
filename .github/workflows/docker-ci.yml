@@ -11,7 +11,7 @@ on:
 env:
   REGISTRY: gcr.io
   GCP_PID: ${{ secrets.GCP_PID }}
-  GCP_KEY: ${{ secrets.CICD_KEY }}
+  GCP_KEY: ${{ secrets.GCP_CICD_KEY }}
 
 jobs:
 #
