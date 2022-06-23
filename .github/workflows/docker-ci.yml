@@ -39,7 +39,7 @@ jobs:
            username: _json_key
            password: ${{ env.GCP_KEY }}
            registry: ${{ env.REGISTRY }}
-           repository: ${{ env.GCP_PID }}/utl-api-cron
+           repository: ${{ env.GCP_PID }}/utl-api
            dockerfile: "_docker/api.Dockerfile"
            push: true
            tag_with_sha: true
