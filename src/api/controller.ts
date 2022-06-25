@@ -10,7 +10,7 @@ export async function fetchAll(
 ) {
     try {
         const query = await Joi.object({
-            chainId: Joi.number().integer().valid(101, 102, 103).required(),
+            chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
 
         const tokens = await TokenModel.find({
@@ -34,11 +34,10 @@ export async function fetchByMint(
         const body = await Joi.object({
             addresses: Joi.array().items(Joi.string()).min(1).required(),
             limit: Joi.number().integer().min(1).required(),
-            chainId: Joi.number().integer().valid(101, 102, 103).required(),
         }).validateAsync(req.body)
 
         const query = await Joi.object({
-            chainId: Joi.number().integer().valid(101, 102, 103).required(),
+            chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
 
         const tokens = await TokenModel.find({
