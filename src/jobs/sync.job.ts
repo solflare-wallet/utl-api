@@ -37,28 +37,31 @@ async function handle() {
         `${name} | New count: ${newTokens.length} | Current count: ${currentTokens.length}`
     )
 
-    const newMints = newTokens.map((token) => token.address)
-    const currentMints = currentTokens.map((token) => token.address)
+    const newMints = newTokens.map(
+        (token) => `${token.address}:${token.chainId}`
+    )
+    const currentMints = currentTokens.map(
+        (token) => `${token.address}:${token.chainId}`
+    )
 
-    const deleteMints = currentMints.filter((mint) => {
-        return !newMints.includes(mint)
+    const deleteTokens = currentTokens.filter((token) => {
+        return !newMints.includes(`${token.address}:${token.chainId}`)
     })
 
     const updateTokens = currentTokens.filter((token) => {
-        return newMints.includes(token.address)
+        return newMints.includes(`${token.address}:${token.chainId}`)
     })
 
     const insertTokens = newTokens.filter((token) => {
-        return !currentMints.includes(token.address)
+        return !currentMints.includes(`${token.address}:${token.chainId}`)
     })
 
     const session = await mongoose.connection.startSession()
     try {
         session.startTransaction()
-        const transactions: mongoose.Query<any, any>[] = []
 
         await TokenModel.deleteMany(
-            { address: { $in: deleteMints } },
+            { _id: { $in: deleteTokens.map((token) => token._id) } },
             { session }
         )
 
@@ -82,7 +85,10 @@ async function handle() {
         }
 
         for (const token of updateTokens) {
-            const newToken = newTokens.find((t) => t.address === token.address)
+            const newToken = newTokens.find(
+                (t) =>
+                    t.address === token.address && t.chainId === token.chainId
+            )
 
             if (!newToken) {
                 LoggerUtil.info(
@@ -91,36 +97,34 @@ async function handle() {
                 continue
             }
 
-            transactions.push(
-                TokenModel.updateOne(
-                    {
-                        address: token.address,
+            await TokenModel.updateOne(
+                {
+                    address: token.address,
+                    chainId: token.chainId,
+                },
+                {
+                    $set: {
+                        name: newToken.name,
+                        symbol: newToken.symbol,
+                        decimals: newToken.decimals,
+                        verified: newToken.verified,
+                        logoURI: newToken.logoURI ?? null,
+                        holders: newToken.holders,
+                        tags: newToken.tags,
                     },
-                    {
-                        $set: {
-                            name: newToken.name,
-                            symbol: newToken.symbol,
-                            decimals: newToken.decimals,
-                            chainId: newToken.chainId,
-                            verified: newToken.verified,
-                            logoURI: newToken.logoURI ?? null,
-                            holders: newToken.holders,
-                            tags: newToken.tags,
-                        },
-                    },
-                    { session }
-                )
+                },
+                { session }
             )
         }
         await session.commitTransaction()
         LoggerUtil.info(
-            `${name} | Deleted: ${deleteMints.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
+            `${name} | Deleted: ${deleteTokens.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
         )
     } catch (error: any) {
         await session.abortTransaction()
         LoggerUtil.info(`${name} | error saving to db ${error.message}`)
     } finally {
-        session.endSession()
+        await session.endSession()
     }
 }
 
