@@ -1,8 +1,8 @@
-import { PrismaPromise } from '@prisma/client'
 import axios from 'axios'
 import { CronJob } from 'cron'
+import mongoose from 'mongoose'
 
-import Prisma from '../prisma'
+import TokenModel from '../models/token.model'
 import LoggerUtil from '../utils/logger.util'
 
 interface Token {
@@ -31,7 +31,7 @@ async function handle() {
     }>(cdnUrl)
 
     const newTokens = response.data.tokens
-    const currentTokens = await Prisma.token.findMany()
+    const currentTokens = await TokenModel.find({})
 
     LoggerUtil.info(
         `${name} | New count: ${newTokens.length} | Current count: ${currentTokens.length}`
@@ -52,89 +52,82 @@ async function handle() {
         return !currentMints.includes(token.address)
     })
 
-    const transactions: PrismaPromise<any>[] = []
+    const session = await mongoose.connection.startSession()
+    try {
+        session.startTransaction()
+        const transactions: mongoose.Query<any, any>[] = []
 
-    transactions.push(
-        Prisma.token.deleteMany({ where: { address: { in: deleteMints } } })
-    )
-
-    for (const token of insertTokens) {
-        transactions.push(
-            Prisma.token.create({
-                data: {
-                    address: token.address,
-                    name: token.name,
-                    symbol: token.symbol,
-                    decimals: token.decimals,
-                    chainId: token.chainId,
-                    verified: token.verified,
-                    logoURI: token.logoURI ?? '',
-                    holders: token.holders,
-                    tags: {
-                        create: token.tags.map((tag: string) => {
-                            return {
-                                tag: tag,
-                            }
-                        }),
-                    },
-                },
-            })
+        await TokenModel.deleteMany(
+            { address: { $in: deleteMints } },
+            { session }
         )
-    }
 
-    for (const token of updateTokens) {
-        const newToken = newTokens.find((t) => t.address === token.address)
-
-        if (!newToken) {
-            LoggerUtil.info(
-                `${name} | Couldnt find new token from current: ${token.address}`
+        for (const token of insertTokens) {
+            await TokenModel.create(
+                [
+                    {
+                        address: token.address,
+                        name: token.name,
+                        symbol: token.symbol,
+                        decimals: token.decimals,
+                        chainId: token.chainId,
+                        verified: token.verified,
+                        logoURI: token.logoURI ?? null,
+                        holders: token.holders,
+                        tags: token.tags,
+                    },
+                ],
+                { session }
             )
-            continue
         }
 
-        transactions.push(
-            Prisma.tag.deleteMany({
-                where: {
-                    address: token.address,
-                },
-            })
-        )
-        transactions.push(
-            Prisma.token.update({
-                where: {
-                    address: token.address,
-                },
-                data: {
-                    name: newToken.name,
-                    symbol: newToken.symbol,
-                    decimals: newToken.decimals,
-                    chainId: newToken.chainId,
-                    verified: newToken.verified,
-                    logoURI: newToken.logoURI ?? '',
-                    holders: newToken.holders,
-                    tags: {
-                        create: newToken.tags.map((tag: string) => {
-                            return {
-                                tag: tag,
-                            }
-                        }),
+        for (const token of updateTokens) {
+            const newToken = newTokens.find((t) => t.address === token.address)
+
+            if (!newToken) {
+                LoggerUtil.info(
+                    `${name} | Couldnt find new token from current: ${token.address}`
+                )
+                continue
+            }
+
+            transactions.push(
+                TokenModel.updateOne(
+                    {
+                        address: token.address,
                     },
-                },
-            })
+                    {
+                        $set: {
+                            name: newToken.name,
+                            symbol: newToken.symbol,
+                            decimals: newToken.decimals,
+                            chainId: newToken.chainId,
+                            verified: newToken.verified,
+                            logoURI: newToken.logoURI ?? null,
+                            holders: newToken.holders,
+                            tags: newToken.tags,
+                        },
+                    },
+                    { session }
+                )
+            )
+        }
+        await session.commitTransaction()
+        LoggerUtil.info(
+            `${name} | Deleted: ${deleteMints.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
         )
+    } catch (error: any) {
+        await session.abortTransaction()
+        LoggerUtil.info(`${name} | error saving to db ${error.message}`)
+    } finally {
+        session.endSession()
     }
-
-    await Prisma.$transaction(transactions)
-
-    LoggerUtil.info(
-        `${name} | Deleted: ${deleteMints.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
-    )
 }
 
 /* istanbul ignore next */
 export const cronJob = () =>
     new CronJob(
-        '0 */5 * * * *',
+        '0 * * * * *',
         async () => {
             await handle() // 30 days
         },

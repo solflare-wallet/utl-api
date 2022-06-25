@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from 'express'
 import Joi from 'joi'
 
-import Prisma from '../prisma'
+import TokenModel from '../models/token.model'
 
 export async function fetchAll(
     req: Request,
@@ -9,19 +9,16 @@ export async function fetchAll(
     next: NextFunction
 ) {
     try {
-        const tokens = await Prisma.token.findMany({
-            include: {
-                tags: true,
-            },
+        const query = await Joi.object({
+            chainId: Joi.number().integer().valid(101, 102, 103).required(),
+        }).validateAsync(req.query)
+
+        const tokens = await TokenModel.find({
+            ...(query.chainId ? { chainId: query.chainId } : {}),
         })
 
         return res.send({
-            content: tokens.map((token) => {
-                return {
-                    ...token,
-                    tags: token.tags.map((tag) => tag.tag),
-                }
-            }),
+            content: tokens,
         })
     } catch (error) {
         next(error)
@@ -34,24 +31,25 @@ export async function fetchByMint(
     next: NextFunction
 ) {
     try {
-        const tokens = await Prisma.token.findMany({
-            where: {
-                address: {
-                    in: req.body.addresses,
-                },
+        const body = await Joi.object({
+            addresses: Joi.array().items(Joi.string()).min(1).required(),
+            limit: Joi.number().integer().min(1).required(),
+            chainId: Joi.number().integer().valid(101, 102, 103).required(),
+        }).validateAsync(req.body)
+
+        const query = await Joi.object({
+            chainId: Joi.number().integer().valid(101, 102, 103).required(),
+        }).validateAsync(req.query)
+
+        const tokens = await TokenModel.find({
+            address: {
+                $in: body.addresses,
             },
-            include: {
-                tags: true,
-            },
-        })
+            ...(query.chainId ? { chainId: query.chainId } : {}),
+        }).exec()
 
         return res.send({
-            content: tokens.map((token) => {
-                return {
-                    ...token,
-                    tags: token.tags.map((tag) => tag.tag),
-                }
-            }),
+            content: tokens,
         })
     } catch (error) {
         next(error)
@@ -67,41 +65,31 @@ export async function searchByContent(
         const data = await Joi.object({
             query: Joi.string().required(),
             limit: Joi.number().integer().min(1).required(),
+            chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
 
-        const tokens = await Prisma.token.findMany({
-            include: {
-                tags: true,
-            },
-            where: {
-                OR: [
-                    {
-                        name: {
-                            contains: data.query,
-                            mode: 'insensitive',
-                        },
+        const tokens = await TokenModel.find({
+            ...(data.chainId ? { chainId: data.chainId } : {}),
+            $or: [
+                {
+                    name: {
+                        $regex: data.query,
+                        $options: 'i',
                     },
-                    {
-                        symbol: {
-                            contains: data.query,
-                            mode: 'insensitive',
-                        },
+                },
+                {
+                    symbol: {
+                        $regex: data.query,
+                        $options: 'i',
                     },
-                ],
-            },
-            take: data.limit ?? 1,
-            orderBy: {
-                holders: 'desc',
-            },
+                },
+            ],
         })
+            .sort({ holders: -1 })
+            .limit(data.limit ?? 1)
 
         return res.send({
-            content: tokens.map((token) => {
-                return {
-                    ...token,
-                    tags: token.tags.map((tag) => tag.tag),
-                }
-            }),
+            content: tokens,
         })
     } catch (error) {
         next(error)
