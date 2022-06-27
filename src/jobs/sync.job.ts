@@ -131,7 +131,7 @@ async function handle() {
 /* istanbul ignore next */
 export const cronJob = () =>
     new CronJob(
-        '0 * * * * *',
+        process.env.CRON_SYNC ?? '0 * * * * *',
         async () => {
             await handle() // 30 days
         },
