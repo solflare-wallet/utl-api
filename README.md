@@ -27,6 +27,13 @@ docker run --env DB_URL="mongodb://user:pass@localhost/utl" --CDN_URL="https://c
 ```
 
 
+## Public Instance
+
+Solflare provides a public community instance of this API that is free for use.
+It pulls token list from [Solfare Token List](https://github.com/solflare-wallet/token-list) CDN.
+```
+https://token-list-api.solana.cloud
+```
 
 
 ## Endpoints
