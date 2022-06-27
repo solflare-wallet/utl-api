@@ -63,6 +63,7 @@ export async function searchByContent(
     try {
         const data = await Joi.object({
             query: Joi.string().required(),
+            start: Joi.number().integer().min(0).required(),
             limit: Joi.number().integer().min(1).required(),
             chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
@@ -85,7 +86,8 @@ export async function searchByContent(
             ],
         })
             .sort({ holders: -1 })
-            .limit(data.limit ?? 1)
+            .skip(data.start)
+            .limit(data.limit)
 
         return res.send({
             content: tokens,
