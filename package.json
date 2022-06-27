@@ -1,4 +1,6 @@
 {
+  "name": "@solflare-wallet/utl-api",
+  "version": "0.0.1",
   "scripts": {
     "start:api": "ts-node src/api.ts",
     "dev:api": "nodemon src/api.ts",
@@ -7,6 +9,8 @@
     "test": "jest",
     "test:detect": "jest --detectOpenHandles"
   },
+  "author": "Solflare Developers <developers@solflare.com>",
+  "license": "ISC",
   "dependencies": {
     "@google-cloud/logging-winston": "^4.2.3",
     "@solana/web3.js": "^1.42.0",
