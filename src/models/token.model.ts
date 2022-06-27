@@ -58,6 +58,8 @@ export const TokenSchema = new mongoose.Schema<IToken>(
             transform: function (doc, ret, options) {
                 delete ret._id
                 delete ret.__v
+                delete ret.createdAt
+                delete ret.updatedAt
                 return ret
             },
         },

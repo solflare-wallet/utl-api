@@ -1,5 +1,6 @@
 import { NextFunction, Response, Request } from 'express'
 import Joi from 'joi'
+import _ from 'lodash'
 
 import TokenModel from '../models/token.model'
 
@@ -33,7 +34,6 @@ export async function fetchByMint(
     try {
         const body = await Joi.object({
             addresses: Joi.array().items(Joi.string()).min(1).required(),
-            limit: Joi.number().integer().min(1).required(),
         }).validateAsync(req.body)
 
         const query = await Joi.object({
