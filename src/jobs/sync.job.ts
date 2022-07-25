@@ -5,7 +5,7 @@ import mongoose from 'mongoose'
 import TokenModel from '../models/token.model'
 import LoggerUtil from '../utils/logger.util'
 
-interface Token {
+export interface Token {
     address: string
     name: string
     symbol: string
@@ -15,6 +15,7 @@ interface Token {
     holders: number | null
     verified: boolean
     tags: string[]
+    extensions: object
 }
 
 async function handle() {
@@ -56,6 +57,15 @@ async function handle() {
         return !currentMints.includes(`${token.address}:${token.chainId}`)
     })
 
+    LoggerUtil.info(
+        `${name} | TO BE Deleted: ${deleteTokens.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
+    )
+
+    if (process.env.SYNC_SAVE !== '1') {
+        LoggerUtil.info(`${name} | Aborted`)
+        return
+    }
+
     const session = await mongoose.connection.startSession()
     try {
         session.startTransaction()
@@ -78,6 +88,7 @@ async function handle() {
                         logoURI: token.logoURI ?? null,
                         holders: token.holders,
                         tags: token.tags,
+                        extensions: token.extensions,
                     },
                 ],
                 { session }
@@ -111,6 +122,7 @@ async function handle() {
                         logoURI: newToken.logoURI ?? null,
                         holders: newToken.holders,
                         tags: newToken.tags,
+                        extensions: newToken.extensions,
                     },
                 },
                 { session }

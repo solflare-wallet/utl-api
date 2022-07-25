@@ -10,6 +10,9 @@ export interface IToken extends mongoose.Document {
     holders: number | null
     logoURI: string | null
     tags: string[]
+    extensions?: {
+        coingeckoId: string
+    }
 }
 
 export const TokenSchema = new mongoose.Schema<IToken>(
@@ -50,6 +53,9 @@ export const TokenSchema = new mongoose.Schema<IToken>(
             type: [String],
             required: true,
             default: [],
+        },
+        extensions: {
+            type: mongoose.Schema.Types.Mixed,
         },
     },
     {
