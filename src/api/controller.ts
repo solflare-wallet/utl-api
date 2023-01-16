@@ -1,6 +1,5 @@
 import { NextFunction, Response, Request } from 'express'
 import Joi from 'joi'
-import _ from 'lodash'
 
 import TokenModel from '../models/token.model'
 
@@ -82,6 +81,9 @@ export async function searchByContent(
                         $regex: data.query,
                         $options: 'i',
                     },
+                },
+                {
+                    address: data.query,
                 },
             ],
         })
