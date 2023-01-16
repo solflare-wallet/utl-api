@@ -72,13 +72,13 @@ export async function searchByContent(
             $or: [
                 {
                     name: {
-                        $regex: data.query,
+                        $regex: escapeRegex(data.query),
                         $options: 'i',
                     },
                 },
                 {
                     symbol: {
-                        $regex: data.query,
+                        $regex: escapeRegex(data.query),
                         $options: 'i',
                     },
                 },
@@ -97,4 +97,8 @@ export async function searchByContent(
     } catch (error) {
         next(error)
     }
+}
+
+function escapeRegex(string: string) {
+    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
 }
