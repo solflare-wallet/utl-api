@@ -135,34 +135,7 @@ Used to get all tokens from array of mint addresses.
 **Request**
 ```json
 {
-    "addresses": [
-      {
-        "address": "SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr",
-        "chainId": 101,
-        "name": "Solrise Finance",
-        "symbol": "SLRS",
-        "verified": true,
-        "decimals": 6,
-        "holders": 40604,
-        "logoURI": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr/logo.png",
-        "tags": []
-      },
-      {
-        "address": "GtFtWCcLYtWQT8NLRwEfUqc9sgVnq4SbuSnMCpwcutNk",
-        "chainId": 101,
-        "name": "tuSLRS",
-        "symbol": "tuSLRS",
-        "verified": true,
-        "decimals": 6,
-        "holders": 1117,
-        "logoURI": "https://raw.githubusercontent.com/sol-farm/token-logos/main/tuSLRS.png",
-        "tags": [
-          "tulip-protocol",
-          "lending",
-          "collateral-tokens"
-        ]
-      }
-  ]
+    "addresses": [ "SLRSSpSLUTP7okbCUBYStWCo1vUgyt775faPqz8HUMr","GtFtWCcLYtWQT8NLRwEfUqc9sgVnq4SbuSnMCpwcutNk"]
 }
 ```
 
