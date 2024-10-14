@@ -31,7 +31,10 @@ async function handle() {
         tokens: Token[]
     }>(cdnUrl)
 
-    const newTokens = response.data.tokens
+    const newTokens = response.data.tokens.filter((token) => {
+        return token.address && token.chainId && token.name && token.symbol && token.decimals
+    })
+
     const currentTokens = await TokenModel.find({})
 
     LoggerUtil.info(
