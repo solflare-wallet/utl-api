@@ -19,6 +19,8 @@ export interface Token {
     extensions: object
 }
 
+let jobRunning: null|number = null;
+
 async function handle() {
     LoggerUtil.info(`${name} | Start ${Date.now()}`)
 
@@ -187,7 +189,19 @@ export const cronJob = () =>
     new CronJob(
         process.env.CRON_SYNC ?? '0 * * * * *',
         async () => {
-            await handle() // 30 days
+            if (jobRunning) {
+                LoggerUtil.info(`${name} | Skip already running from ${jobRunning}`)
+                return
+            }
+            jobRunning = Date.now();
+            try {
+                await handle() // 30 days
+            } catch (e) {
+                LoggerUtil.info(`${name} | Failed: ${e.message}`)
+            } finally {
+                jobRunning = null
+            }
+
         },
         null,
         true,
