@@ -4,6 +4,7 @@ import mongoose from 'mongoose'
 
 import TokenModel from '../models/token.model'
 import LoggerUtil from '../utils/logger.util'
+import _ from 'lodash'
 
 export interface Token {
     address: string
@@ -69,7 +70,8 @@ async function handle() {
         return
     }
 
-    const session = await mongoose.connection.startSession()
+
+    let session = await mongoose.connection.startSession()
     try {
         session.startTransaction()
 
@@ -77,70 +79,107 @@ async function handle() {
             { _id: { $in: deleteTokens.map((token) => token._id) } },
             { session }
         )
-
-        for (const token of insertTokens) {
-            await TokenModel.create(
-                [
-                    {
-                        address: token.address,
-                        name: token.name,
-                        symbol: token.symbol,
-                        decimals: token.decimals,
-                        chainId: token.chainId,
-                        verified: token.verified,
-                        logoURI: token.logoURI ?? null,
-                        holders: token.holders,
-                        tags: token.tags,
-                        extensions: token.extensions,
-                    },
-                ],
-                { session }
-            )
-        }
-
-        for (const token of updateTokens) {
-            const newToken = newTokens.find(
-                (t) =>
-                    t.address === token.address && t.chainId === token.chainId
-            )
-
-            if (!newToken) {
-                LoggerUtil.info(
-                    `${name} | Couldnt find new token from current: ${token.address}`
-                )
-                continue
-            }
-
-            await TokenModel.updateOne(
-                {
-                    address: token.address,
-                    chainId: token.chainId,
-                },
-                {
-                    $set: {
-                        name: newToken.name,
-                        symbol: newToken.symbol,
-                        decimals: newToken.decimals,
-                        verified: newToken.verified,
-                        logoURI: newToken.logoURI ?? null,
-                        holders: newToken.holders,
-                        tags: newToken.tags,
-                        extensions: newToken.extensions,
-                    },
-                },
-                { session }
-            )
-        }
         await session.commitTransaction()
-        LoggerUtil.info(
-            `${name} | Deleted: ${deleteTokens.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
-        )
-    } catch (error: any) {
+    }
+    catch (error: any) {
         await session.abortTransaction()
-        LoggerUtil.info(`${name} | error saving to db ${error.message}`)
+        LoggerUtil.info(`${name} | error deleting from db ${error.message}`)
+        return;
     } finally {
         await session.endSession()
     }
+
+
+    const insertTokensBatches = _.chunk(insertTokens, 4000);
+    for (const insertTokensBatch of insertTokensBatches) {
+        session = await mongoose.connection.startSession()
+        try {
+            session.startTransaction()
+
+
+            for (const token of insertTokensBatch) {
+                await TokenModel.create(
+                    [
+                        {
+                            address: token.address,
+                            name: token.name,
+                            symbol: token.symbol,
+                            decimals: token.decimals,
+                            chainId: token.chainId,
+                            verified: token.verified,
+                            logoURI: token.logoURI ?? null,
+                            holders: token.holders,
+                            tags: token.tags,
+                            extensions: token.extensions,
+                        },
+                    ],
+                    { session }
+                )
+            }
+
+
+            await session.commitTransaction()
+        } catch (error: any) {
+            await session.abortTransaction()
+            LoggerUtil.info(`${name} | error inserting to db ${error.message}`)
+            break;
+        } finally {
+            await session.endSession()
+        }
+    }
+
+    const updateTokensBatches = _.chunk(updateTokens, 4000);
+    for (const updateTokensBatch of updateTokensBatches) {
+        session = await mongoose.connection.startSession()
+        try {
+            session.startTransaction()
+
+            for (const token of updateTokensBatch) {
+                const newToken = newTokens.find(
+                    (t) =>
+                        t.address === token.address && t.chainId === token.chainId
+                )
+
+                if (!newToken) {
+                    LoggerUtil.info(
+                        `${name} | Couldnt find new token from current: ${token.address}`
+                    )
+                    continue
+                }
+
+                await TokenModel.updateOne(
+                    {
+                        address: token.address,
+                        chainId: token.chainId,
+                    },
+                    {
+                        $set: {
+                            name: newToken.name,
+                            symbol: newToken.symbol,
+                            decimals: newToken.decimals,
+                            verified: newToken.verified,
+                            logoURI: newToken.logoURI ?? null,
+                            holders: newToken.holders,
+                            tags: newToken.tags,
+                            extensions: newToken.extensions,
+                        },
+                    },
+                    { session }
+                )
+            }
+            await session.commitTransaction()
+        } catch (error: any) {
+            await session.abortTransaction()
+            LoggerUtil.info(`${name} | error updating to db ${error.message}`)
+            break;
+        } finally {
+            await session.endSession()
+        }
+    }
+
+    LoggerUtil.info(
+        `${name} | Deleted: ${deleteTokens.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
+    )
 }
 
 /* istanbul ignore next */

@@ -1,6 +1,6 @@
 {
   "name": "@solflare-wallet/utl-api",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "scripts": {
     "start:api": "ts-node src/api.ts",
     "dev:api": "nodemon src/api.ts",
