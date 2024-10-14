@@ -1,10 +1,11 @@
 import axios from 'axios'
 import { CronJob } from 'cron'
+import _ from 'lodash'
 import mongoose from 'mongoose'
 
 import TokenModel from '../models/token.model'
 import LoggerUtil from '../utils/logger.util'
-import _ from 'lodash'
+
 
 export interface Token {
     address: string
@@ -196,8 +197,8 @@ export const cronJob = () =>
             jobRunning = Date.now();
             try {
                 await handle() // 30 days
-            } catch (e) {
-                LoggerUtil.info(`${name} | Failed: ${e.message}`)
+            } catch (error: any) {
+                LoggerUtil.info(`${name} | Failed: ${error.message}`)
             } finally {
                 jobRunning = null
             }
