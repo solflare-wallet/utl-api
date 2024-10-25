@@ -77,6 +77,7 @@ TokenSchema.index({ name: 1 }, { collation: { locale: 'en', strength: 1 } })
 TokenSchema.index({ symbol: 1 }, { collation: { locale: 'en', strength: 1 } })
 TokenSchema.index({ chainId: 1 })
 TokenSchema.index({ holders: -1 })
+TokenSchema.index({ verified: -1 })
 TokenSchema.index({ tags: 1 })
 
 const TokenModel = mongoose.model('token', TokenSchema)

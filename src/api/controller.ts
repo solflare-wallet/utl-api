@@ -14,6 +14,7 @@ export async function fetchAll(
         }).validateAsync(req.query)
 
         const tokens = await TokenModel.find({
+            verified: true,
             ...(query.chainId ? { chainId: query.chainId } : {}),
         })
 

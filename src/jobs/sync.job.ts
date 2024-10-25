@@ -74,23 +74,23 @@ async function handle() {
     }
 
 
-    let session = await mongoose.connection.startSession()
-    try {
-        session.startTransaction()
-
-        await TokenModel.deleteMany(
-            { _id: { $in: deleteTokens.map((token) => token._id) } },
-            { session }
-        )
-        await session.commitTransaction()
-    }
-    catch (error: any) {
-        await session.abortTransaction()
-        LoggerUtil.info(`${name} | error deleting from db ${error.message}`)
-        return;
-    } finally {
-        await session.endSession()
-    }
+    let session;//; = await mongoose.connection.startSession()
+    // try {
+    //     session.startTransaction()
+    //
+    //     await TokenModel.deleteMany(
+    //         { _id: { $in: deleteTokens.map((token) => token._id) } },
+    //         { session }
+    //     )
+    //     await session.commitTransaction()
+    // }
+    // catch (error: any) {
+    //     await session.abortTransaction()
+    //     LoggerUtil.info(`${name} | error deleting from db ${error.message}`)
+    //     return;
+    // } finally {
+    //     await session.endSession()
+    // }
 
 
     const insertTokensBatches = _.chunk(insertTokens, 4000);
