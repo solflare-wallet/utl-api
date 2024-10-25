@@ -52,9 +52,10 @@ async function handle() {
         (token) => `${token.address}:${token.chainId}`
     )
 
-    const deleteTokens = currentTokens.filter((token) => {
-        return !newMints.includes(`${token.address}:${token.chainId}`)
-    })
+    const deleteTokens = [];
+    // currentTokens.filter((token) => {
+    //     return !newMints.includes(`${token.address}:${token.chainId}`)
+    // })
 
     const updateTokens = currentTokens.filter((token) => {
         return newMints.includes(`${token.address}:${token.chainId}`)
@@ -93,7 +94,7 @@ async function handle() {
     // }
 
 
-    const insertTokensBatches = _.chunk(insertTokens, 4000);
+    const insertTokensBatches = _.chunk(insertTokens, 2000);
     for (const insertTokensBatch of insertTokensBatches) {
         session = await mongoose.connection.startSession()
         try {
@@ -131,7 +132,7 @@ async function handle() {
         }
     }
 
-    const updateTokensBatches = _.chunk(updateTokens, 4000);
+    const updateTokensBatches = _.chunk(updateTokens, 1000);
     for (const updateTokensBatch of updateTokensBatches) {
         session = await mongoose.connection.startSession()
         try {
