@@ -72,15 +72,8 @@ export async function searchByContent(
             ...(data.chainId ? { chainId: data.chainId } : {}),
             $or: [
                 {
-                    name: {
-                        $regex: escapeRegex(data.query),
-                        $options: 'i',
-                    },
-                },
-                {
-                    symbol: {
-                        $regex: escapeRegex(data.query),
-                        $options: 'i',
+                    $text: {
+                        $search: data.query,
                     },
                 },
                 {
@@ -101,5 +94,5 @@ export async function searchByContent(
 }
 
 function escapeRegex(string: string) {
-    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+    return string.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&')
 }
