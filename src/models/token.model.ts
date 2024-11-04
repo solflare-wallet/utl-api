@@ -73,8 +73,7 @@ export const TokenSchema = new mongoose.Schema<IToken>(
 )
 
 TokenSchema.index({ address: 1, chainId: 1 }, { unique: true })
-TokenSchema.index({ name: 1 }, { collation: { locale: 'en', strength: 1 } })
-TokenSchema.index({ symbol: 1 }, { collation: { locale: 'en', strength: 1 } })
+TokenSchema.index({ name: 'text', symbol: 'text' })
 TokenSchema.index({ chainId: 1 })
 TokenSchema.index({ holders: -1 })
 TokenSchema.index({ verified: -1 })
