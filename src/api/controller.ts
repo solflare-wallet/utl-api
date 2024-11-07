@@ -68,20 +68,23 @@ export async function searchByContent(
             chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
 
-        const tokens = await TokenModel.find({
-            ...(data.chainId ? { chainId: data.chainId } : {}),
-            $or: [
-                {
-                    $text: {
-                        $search: data.query,
+        const tokens = await TokenModel.find(
+            {
+                ...(data.chainId ? { chainId: data.chainId } : {}),
+                $or: [
+                    {
+                        $text: {
+                            $search: data.query,
+                        },
                     },
-                },
-                {
-                    address: data.query,
-                },
-            ],
-        })
-            .sort({ holders: -1 })
+                    {
+                        address: data.query,
+                    },
+                ],
+            },
+            { score: { $meta: 'textScore' } }
+        )
+            .sort({ verified: -1, holders: -1, score: { $meta: 'textScore' } })
             .skip(data.start)
             .limit(data.limit)
 
