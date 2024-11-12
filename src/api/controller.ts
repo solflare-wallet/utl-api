@@ -74,11 +74,11 @@ export async function searchByContent(
                 $or: [
                     {
                         $text: {
-                            $search: data.query,
+                            $search: escapeRegex(data.query.trim()),
                         },
                     },
                     {
-                        address: data.query,
+                        address: escapeRegex(data.query.trim()),
                     },
                 ],
             },
