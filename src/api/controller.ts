@@ -68,25 +68,41 @@ export async function searchByContent(
             chainId: Joi.number().integer().valid(101, 102, 103),
         }).validateAsync(req.query)
 
-        const tokens = await TokenModel.find(
-            {
-                ...(data.chainId ? { chainId: data.chainId } : {}),
-                $or: [
-                    {
-                        $text: {
-                            $search: escapeRegex(data.query.trim()),
-                        },
-                    },
-                    {
-                        address: escapeRegex(data.query.trim()),
-                    },
-                ],
-            },
-            { score: { $meta: 'textScore' } }
-        )
-            .sort({ verified: -1, holders: -1, score: { $meta: 'textScore' } })
-            .skip(data.start)
-            .limit(data.limit)
+        // Special case if only "+" is passed as query than act like its search all
+        const tokens =
+            data.query && data.query.length === 1 && data.query[0] === '+'
+                ? await TokenModel.find({
+                      ...(data.chainId ? { chainId: data.chainId } : {}),
+                  })
+                      .sort({
+                          verified: -1,
+                          holders: -1,
+                      })
+                      .skip(data.start)
+                      .limit(data.limit)
+                : await TokenModel.find(
+                      {
+                          ...(data.chainId ? { chainId: data.chainId } : {}),
+                          $or: [
+                              {
+                                  $text: {
+                                      $search: escapeRegex(data.query.trim()),
+                                  },
+                              },
+                              {
+                                  address: escapeRegex(data.query.trim()),
+                              },
+                          ],
+                      },
+                      { score: { $meta: 'textScore' } }
+                  )
+                      .sort({
+                          verified: -1,
+                          holders: -1,
+                          score: { $meta: 'textScore' },
+                      })
+                      .skip(data.start)
+                      .limit(data.limit)
 
         return res.send({
             content: tokens,
