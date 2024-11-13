@@ -70,7 +70,7 @@ export async function searchByContent(
 
         // Special case if only "+" is passed as query than act like its search all
         const tokens =
-            data.query && data.query.length === 1 && data.query[0] === '+'
+            data.query && data.query.length === 1 && data.query === ' '
                 ? await TokenModel.find({
                       ...(data.chainId ? { chainId: data.chainId } : {}),
                   })
