@@ -98,8 +98,8 @@ export async function searchByContent(
                   )
                       .sort({
                           verified: -1,
-                          holders: -1,
                           score: { $meta: 'textScore' },
+                          holders: -1,
                       })
                       .skip(data.start)
                       .limit(data.limit)
