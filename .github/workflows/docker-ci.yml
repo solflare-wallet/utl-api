@@ -4,14 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (v1.0.4)'
+        description: 'Version (v1.0.6)'
         required: true
 
 
 env:
-  REGISTRY: gcr.io
   GCP_PID: ${{ secrets.GCP_PID }}
-  GCP_KEY: ${{ secrets.GCP_CICD_KEY }}
+  REGISTRY: 'europe-west1-docker.pkg.dev'
+  REGISTRY_USERNAME: '_json_key'
+  REGISTRY_PASSWORD: ${{ secrets.GCP_CICD_KEY }}
+  REGISTRY_NAME: 'utl-api'
 
 jobs:
 #
@@ -31,39 +33,38 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Build and push Docker Panel API image
-        uses: docker/build-push-action@v1
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-           username: _json_key
-           password: ${{ env.GCP_KEY }}
-           registry: ${{ env.REGISTRY }}
-           repository: ${{ env.GCP_PID }}/utl-api
-           dockerfile: "_docker/api.Dockerfile"
-           push: true
-           tag_with_sha: true
-           tags: latest, ${{ github.event.inputs.version }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY_PASSWORD }}
 
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          flavor: |
+            latest=auto
+          images: | # used as base name for tags ;)
+            ${{ env.REGISTRY }}/${{ env.GCP_PID }}/${{ env.REGISTRY_NAME }}/base-production
+          tags: |
+            type=semver,pattern={{version}}   
+            type=raw,value={{branch}}-sha-{{sha}}
+            type=sha
 
-  docker-push-cron:
-   #    needs: test
-   runs-on: ubuntu-latest
-   permissions:
-     contents: read
-     pull-requests: read
-   steps:
-     - uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-     - name: Build and push Docker Panel API Cron image
-       uses: docker/build-push-action@v1
-       with:
-         username: _json_key
-         password: ${{ env.GCP_KEY }}
-         registry: ${{ env.REGISTRY }}
-         repository: ${{ env.GCP_PID }}/utl-api-cron
-         dockerfile: "_docker/cron.Dockerfile"
-         push: true
-         tag_with_sha: true
-         tags: latest, ${{ github.event.inputs.version }}
-
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          cache-from: type=gha
+          provenance: false
+          cache-to: type=gha,mode=max
+          file: '_docker/base.Dockerfile'
+          tags: '${{ steps.meta.outputs.tags }}'
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            START_CMD=tail -f /dev/null
