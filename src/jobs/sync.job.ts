@@ -6,7 +6,6 @@ import mongoose from 'mongoose'
 import TokenModel from '../models/token.model'
 import LoggerUtil from '../utils/logger.util'
 
-
 export interface Token {
     address: string
     name: string
@@ -20,9 +19,9 @@ export interface Token {
     extensions: object
 }
 
-let jobRunning: null|number = null;
+let jobRunning: null | number = null
 
-async function handle() {
+export async function handle() {
     LoggerUtil.info(`${name} | Start ${Date.now()}`)
 
     const cdnUrl = process.env.CDN_URL
@@ -35,35 +34,61 @@ async function handle() {
         tokens: Token[]
     }>(cdnUrl)
 
+    LoggerUtil.info(
+        `${name} | Tokens got ${response.data.tokens.length} ${Date.now()}`
+    )
+
     const newTokens = response.data.tokens.filter((token) => {
-        return token.address && token.chainId && token.name && token.symbol && token.decimals
+        return (
+            token.address &&
+            token.chainId &&
+            token.name &&
+            token.symbol &&
+            token.decimals
+        )
     })
 
-    const currentTokens = await TokenModel.find({})
+    LoggerUtil.info(`${name} | New count: ${newTokens.length}`)
+
+    const currentTokens = await TokenModel.find({
+        select: {
+            address: 1,
+            chainId: 1,
+        },
+    })
 
     LoggerUtil.info(
         `${name} | New count: ${newTokens.length} | Current count: ${currentTokens.length}`
     )
 
-    const newMints = newTokens.map(
-        (token) => `${token.address}:${token.chainId}`
-    )
-    const currentMints = currentTokens.map(
-        (token) => `${token.address}:${token.chainId}`
+    const newMints = new Set(
+        newTokens.map((token) => `${token.address}:${token.chainId}`)
     )
 
-    const deleteTokens = [];
+    LoggerUtil.info(`${name} | New mints: ${newMints.size}`)
+
+    const currentMints = new Set(
+        currentTokens.map((token) => `${token.address}:${token.chainId}`)
+    )
+
+    LoggerUtil.info(`${name} | Current mints: ${currentMints.size}`)
+
+    const deleteTokens = []
     // currentTokens.filter((token) => {
     //     return !newMints.includes(`${token.address}:${token.chainId}`)
     // })
 
     const updateTokens = currentTokens.filter((token) => {
-        return newMints.includes(`${token.address}:${token.chainId}`)
+        return newMints.has(`${token.address}:${token.chainId}`)
     })
 
+    LoggerUtil.info(`${name} | Update tokens: ${updateTokens.length}`)
+
     const insertTokens = newTokens.filter((token) => {
-        return !currentMints.includes(`${token.address}:${token.chainId}`)
+        return !currentMints.has(`${token.address}:${token.chainId}`)
     })
+
+    LoggerUtil.info(`${name} | Insert tokens: ${insertTokens.length}`)
 
     LoggerUtil.info(
         `${name} | TO BE Deleted: ${deleteTokens.length} | Updated: ${updateTokens.length} | Created: ${insertTokens.length}`
@@ -74,8 +99,7 @@ async function handle() {
         return
     }
 
-
-    let session;//; = await mongoose.connection.startSession()
+    let session //; = await mongoose.connection.startSession()
     // try {
     //     session.startTransaction()
     //
@@ -93,13 +117,17 @@ async function handle() {
     //     await session.endSession()
     // }
 
-
-    const insertTokensBatches = _.chunk(insertTokens, 2000);
+    const insertTokensBatches = _.chunk(insertTokens, 2000)
+    LoggerUtil.info(`${name} | Insert batches: ${insertTokensBatches.length}`)
+    let i = 0
     for (const insertTokensBatch of insertTokensBatches) {
+        i++
+        LoggerUtil.info(
+            `${name} | Insert batches at: ${i}/${insertTokensBatches.length}`
+        )
         session = await mongoose.connection.startSession()
         try {
             session.startTransaction()
-
 
             for (const token of insertTokensBatch) {
                 await TokenModel.create(
@@ -121,19 +149,24 @@ async function handle() {
                 )
             }
 
-
             await session.commitTransaction()
         } catch (error: any) {
             await session.abortTransaction()
             LoggerUtil.info(`${name} | error inserting to db ${error.message}`)
-            break;
+            break
         } finally {
             await session.endSession()
         }
     }
 
-    const updateTokensBatches = _.chunk(updateTokens, 1000);
+    const updateTokensBatches = _.chunk(updateTokens, 1000)
+    LoggerUtil.info(`${name} | Update batches: ${updateTokensBatches.length}`)
+    i = 0
     for (const updateTokensBatch of updateTokensBatches) {
+        i++
+        LoggerUtil.info(
+            `${name} | Update batches at: ${i}/${updateTokensBatches.length}`
+        )
         session = await mongoose.connection.startSession()
         try {
             session.startTransaction()
@@ -141,7 +174,8 @@ async function handle() {
             for (const token of updateTokensBatch) {
                 const newToken = newTokens.find(
                     (t) =>
-                        t.address === token.address && t.chainId === token.chainId
+                        t.address === token.address &&
+                        t.chainId === token.chainId
                 )
 
                 if (!newToken) {
@@ -175,7 +209,7 @@ async function handle() {
         } catch (error: any) {
             await session.abortTransaction()
             LoggerUtil.info(`${name} | error updating to db ${error.message}`)
-            break;
+            break
         } finally {
             await session.endSession()
         }
@@ -192,10 +226,12 @@ export const cronJob = () =>
         process.env.CRON_SYNC ?? '0 * * * * *',
         async () => {
             if (jobRunning) {
-                LoggerUtil.info(`${name} | Skip already running from ${jobRunning}`)
+                LoggerUtil.info(
+                    `${name} | Skip already running from ${jobRunning}`
+                )
                 return
             }
-            jobRunning = Date.now();
+            jobRunning = Date.now()
             try {
                 await handle() // 30 days
             } catch (error: any) {
@@ -203,7 +239,6 @@ export const cronJob = () =>
             } finally {
                 jobRunning = null
             }
-
         },
         null,
         true,
